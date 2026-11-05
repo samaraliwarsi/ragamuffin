@@ -1,4 +1,4 @@
-streamlit
+slint
 chromadb
 ollama
 python-frontmatter
