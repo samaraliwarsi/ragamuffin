@@ -1,4 +1,4 @@
-/* Base Obsidian-like Dark Theme Overrides */
+/* --- BASE THEME --- */
 .stApp {
     background-color: #1e1e1e;
     color: #d4d4d4;
@@ -28,7 +28,49 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Remove Streamlit Header */
-header {
-    visibility: hidden;
+/* --- HEADER & TOOLBAR FIXES --- */
+/* 1. Make the header transparent but KEEP it in the DOM */
+header[data-testid="stHeader"] {
+    background-color: transparent !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+/* 2. Hide the right-side toolbar (Deploy button, menu, etc.) */
+[data-testid="stToolbar"], 
+[data-testid="stAppDeployButton"], 
+#MainMenu, 
+footer {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* 3. Force ALL possible sidebar toggle buttons to be visible */
+/* Streamlit has changed these IDs over time; we target all known ones. */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+button[title="Open sidebar"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 999999 !important;
+    position: fixed !important;
+    top: 15px !important;
+    left: 0px !important;
+    background-color: #2d2d2d !important;
+    border: 1px solid #444 !important;
+    border-left: none !important;
+    border-radius: 0 8px 8px 0 !important;
+    padding: 8px !important;
+}
+
+/* 4. Ensure the icon inside the toggle is visible */
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="stSidebarCollapseButton"] svg,
+button[title="Open sidebar"] svg {
+    fill: #d4d4d4 !important;
+    color: #d4d4d4 !important;
+    display: block !important;
 }
