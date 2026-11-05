@@ -19,7 +19,7 @@ EMBED_MODEL = "nomic-embed-text"
 CHAT_MODEL = "ministral-3:14b"
 HISTORY_FILE = "chat_history.json"
 
-st.set_page_config(page_title="Ragamuffin", page_icon="📚", layout="wide")
+st.set_page_config(page_title="Ragamuffin", page_icon="📚", layout="wide", initial_sidebar_state="expanded")
 load_css("styles.css")
 st.title("📚 Ragamuffin: Kinor Lore Master")
 
