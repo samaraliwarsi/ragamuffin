@@ -25,13 +25,15 @@ export component MainWindow inherits Window {
     in-out property <bool> settings-open: false;
     in-out property <bool> sidebar-open: true;
     in-out property <bool> anchors-open: false; 
-    in-out property <string> notification: ""; // NEW: Notification property
+    in-out property <string> notification: "";
+    in-out property <string> vault-path: "";
 
     callback send-message(string);
     callback open-settings();
     callback sync-vault();
     callback toggle-anchor(string); 
     callback clear-anchors();
+    callback save-vault-path(string);
 
     HorizontalBox {
         // Sidebar
@@ -201,5 +203,7 @@ export component MainWindow inherits Window {
         visible: root.settings-open;
         close-clicked => { root.settings-open = false; }
         sync-clicked => { root.sync-vault(); }
+        vault-path: root.vault-path; 
+        save-path-clicked(path) => { root.save-vault-path(path); }
     }
 }

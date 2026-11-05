@@ -7,6 +7,8 @@ import datetime
 from core.retriever import get_context, ask_ollama, get_all_sources
 from core.indexer import build_index
 
+CONFIG_FILE = "config.json"
+
 class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
     def __init__(self):
         super().__init__()
@@ -20,12 +22,24 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         self.messages = slint.ListModel(loaded_history)
         self.load_anchor_files()
 
-        # Thread-safe queue for communicating between background threads and UI
+        # Load Vault Path from config
+        self.config = self.load_config()
+        self.vault_path = self.config.get("vault_path", "")
+
+        # Thread-safe queue for UI updates
         self.ui_queue = queue.Queue()
-        
-        # Poll the queue every 100ms using a Slint Timer
         self.timer = slint.Timer()
         self.timer.start(slint.TimerMode.Repeated, datetime.timedelta(milliseconds=100), self.process_ui_queue)
+
+    def load_config(self):
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r") as f:
+                return json.load(f)
+        return {"vault_path": ""}
+
+    def save_config(self):
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(self.config, f, indent=4)
 
     def process_ui_queue(self):
         try:
@@ -55,6 +69,19 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         data = [{"role": m["role"], "content": m["content"]} for m in self.messages]
         with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
+
+    @slint.callback
+    def open_settings(self):
+        self.vault_path = self.config.get("vault_path", "")
+        self.settings_open = True
+
+    @slint.callback
+    def save_vault_path(self, path):
+        self.config["vault_path"] = path
+        self.save_config()
+        self.vault_path = path
+        self.ui_queue.put(("notification", "Vault path saved!"))
+        threading.Timer(3.0, lambda: self.ui_queue.put(("clear_notification", None))).start()
 
     @slint.callback
     def toggle_anchor(self, file_name):
@@ -90,29 +117,32 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         self.is_loading = False
 
     @slint.callback
-    def open_settings(self):
-        self.settings_open = True
-        
-    @slint.callback
     def sync_vault(self):
-        # Show immediate feedback
-        self.ui_queue.put(("notification", "Syncing vault... Please wait."))
+        current_path = self.vault_path 
+
+        if not current_path or not os.path.exists(current_path):
+            self.ui_queue.put(("notification", "Error: Set a valid Vault Path in Settings first."))
+            threading.Timer(4.0, lambda: self.ui_queue.put(("clear_notification", None))).start()
+            return
+
+        self.ui_queue.put(("notification", "Syncing vault... Check terminal for progress."))
         
-        def run_sync():
+        safe_queue = self.ui_queue
+        
+        def run_sync(path, q):
             try:
-                count = build_index()
-                # Put results into the queue for the main thread
-                self.ui_queue.put(("reload_anchors", None))
-                self.ui_queue.put(("notification", f"Sync Complete! Indexed {count} chunks."))
+                count = build_index(path) 
                 
-                # Clear notification after 3 seconds
-                threading.Timer(3.0, lambda: self.ui_queue.put(("clear_notification", None))).start()
+                q.put(("reload_anchors", None))
+                q.put(("notification", f"Sync Complete! Processed {count} files."))
+                
+                threading.Timer(3.0, lambda: q.put(("clear_notification", None))).start()
                 
             except Exception as e:
-                self.ui_queue.put(("notification", "Sync failed. Check terminal."))
+                q.put(("notification", f"Sync failed: {str(e)}"))
                 print(f"Error syncing: {e}")
                 
-        threading.Thread(target=run_sync).start()
+        threading.Thread(target=run_sync, args=(current_path, safe_queue)).start()
 
 if __name__ == "__main__":
     app = RagamuffinApp()

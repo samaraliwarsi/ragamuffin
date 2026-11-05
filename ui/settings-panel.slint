@@ -1,14 +1,19 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
 
 export component SettingsPanel inherits Rectangle {
     callback close-clicked();
     callback sync-clicked();
+    callback save-path-clicked(string);
     
-    background: #000000aa; 
+    in-out property <string> vault-path: "";
+    
+    width: 100%; 
+    height: 100%;
+    background: #000000cc; 
     
     Rectangle {
-        width: 400px;
-        height: 300px;
+        width: 500px;
+        height: 350px;
         background: #252526;
         border-radius: 10px;
         x: (parent.width - self.width) / 2;
@@ -16,16 +21,34 @@ export component SettingsPanel inherits Rectangle {
         
         VerticalBox {
             padding: 20px;
-            spacing: 10px;
+            spacing: 15px;
             
-            Text { text: "Settings"; color: #ffffff; font-size: 20px; }
+            Text { 
+                text: "Settings"; 
+                color: #ffffff; 
+                font-size: 20px; 
+                font-weight: 700;
+            }
             
+            Text { text: "Vault Path:"; color: #aaaaaa; font-size: 14px; }
             HorizontalBox {
                 spacing: 10px;
-                Button { 
-                    text: "Sync Vault to Database"; 
-                    clicked => { root.sync-clicked(); } 
+                LineEdit {
+                    horizontal-stretch: 1;
+                    text <=> root.vault-path;
+                    placeholder-text: "C:\\Path\\To\\Vault";
                 }
+                Button {
+                    text: "Save Path";
+                    clicked => { root.save-path-clicked(root.vault-path); }
+                }
+            }
+            
+            Rectangle { height: 1px; background: #444; } // Divider
+            
+            Button { 
+                text: "Sync Vault to Database"; 
+                clicked => { root.sync-clicked(); } 
             }
             
             Rectangle { } // Spacer

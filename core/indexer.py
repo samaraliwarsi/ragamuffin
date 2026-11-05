@@ -26,8 +26,7 @@ def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
         start += chunk_size - overlap
     return chunks
 
-def build_index():
-    vault_path = get_vault_path()
+def build_index(vault_path):
     if not vault_path or not os.path.exists(vault_path):
         print(f"Error: Vault path '{vault_path}' is invalid or missing in config.json.")
         return 0
