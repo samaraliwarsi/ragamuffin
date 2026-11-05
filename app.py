@@ -5,6 +5,13 @@ import json
 import os
 from indexer import build_index
 
+def load_css(file_name):
+    with open(file_name, "r") as f:
+        css = f.read()
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+
+
 # --- CONFIGURATION ---
 CHROMA_DB_PATH = "chroma_db"
 COLLECTION_NAME = "novel_lore"
@@ -13,6 +20,7 @@ CHAT_MODEL = "ministral-3:14b"
 HISTORY_FILE = "chat_history.json"
 
 st.set_page_config(page_title="Ragamuffin", page_icon="📚", layout="wide")
+load_css("styles.css")
 st.title("📚 Ragamuffin: Kinor Lore Master")
 
 def load_chat_history():
