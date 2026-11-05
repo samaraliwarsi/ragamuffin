@@ -28,19 +28,20 @@ export component MainWindow inherits Window {
             background: #252526;
             VerticalBox {
                 padding: 15px;
+                spacing: 10px;
                 Text { text: "Ragamuffin"; color: #d4d4d4; font-size: 18px; font-weight: 700; }
                 Button { text: "Settings"; clicked => { root.open-settings(); } }
                 Rectangle { } // Spacer
             }
         }
 
-        // Main Chat
+        // Main Chat Area
         VerticalBox {
+            // 1. Scrollable Chat History
             ScrollView {
-                viewport-width: self.width;
-                viewport-height: self.height;
-                VerticalBox {
+                VerticalLayout {
                     padding: 20px;
+                    spacing: 10px;
                     for msg in root.messages : ChatMessage {
                         role: msg.role;
                         content: msg.content;
@@ -48,12 +49,12 @@ export component MainWindow inherits Window {
                 }
             }
 
-            // Input
+            // 2. Input Area
             Rectangle {
                 height: 80px;
                 background: #252526;
-                padding: 15px;
                 HorizontalBox {
+                    padding: 15px;
                     spacing: 10px;
                     LineEdit {
                         text <=> root.current-input;

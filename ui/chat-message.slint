@@ -5,13 +5,13 @@ export component ChatMessage inherits Rectangle {
     height: text-layout.preferred-height + 40px;
     background: role == "user" ? #2d2d2d : #1e1e1e;
     border-radius: 8px;
-    margin-bottom: 10px;
-    padding: 10px;
 
     VerticalLayout {
+        padding: 10px;
+        spacing: 5px;
         Text { 
             text: role == "user" ? "You" : "AI"; 
-            color: #888; 
+            color: #888888; 
             font-size: 12px; 
         }
         text-layout := Text { 
