@@ -1,14 +1,21 @@
 import os
+import json
 import chromadb
 import ollama
 import frontmatter
 
-VAULT_PATH = r"D:\Path\To\Your\Obsidian\Vault\Kinor" # CHANGE THIS
 CHROMA_DB_PATH = "data/chroma_db"
 COLLECTION_NAME = "novel_lore"
 EMBED_MODEL = "nomic-embed-text"
 CHUNK_SIZE = 1200
 CHUNK_OVERLAP = 200
+CONFIG_FILE = "config.json"
+
+def get_vault_path():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f).get("vault_path", "")
+    return ""
 
 def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     chunks = []
@@ -20,6 +27,11 @@ def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     return chunks
 
 def build_index():
+    vault_path = get_vault_path()
+    if not vault_path or not os.path.exists(vault_path):
+        print(f"Error: Vault path '{vault_path}' is invalid or missing in config.json.")
+        return 0
+
     client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
     try:
         client.delete_collection(COLLECTION_NAME)
@@ -28,7 +40,7 @@ def build_index():
     collection = client.create_collection(COLLECTION_NAME)
     
     doc_id = 0
-    for root, _, files in os.walk(VAULT_PATH):
+    for root, _, files in os.walk(vault_path):
         for file in files:
             if file.endswith(".md"):
                 filepath = os.path.join(root, file)

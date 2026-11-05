@@ -59,3 +59,15 @@ User Question: {query}"""
         keep_alive=keep_alive
     )
     return response['message']['content']
+
+
+def get_all_sources():
+    """Returns a sorted list of all unique file names in the ChromaDB."""
+    client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+    try:
+        collection = client.get_collection(COLLECTION_NAME)
+        results = collection.get(include=['metadatas'])
+        sources = set(meta['source'] for meta in results['metadatas'])
+        return sorted(list(sources))
+    except Exception:
+        return []
