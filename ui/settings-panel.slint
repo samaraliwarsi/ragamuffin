@@ -1,0 +1,28 @@
+import { Button, VerticalBox } from "std-widgets.slint";
+
+export component SettingsPanel inherits Rectangle {
+    in-out property <bool> visible: false;
+    callback close-clicked();
+    
+    visible: root.visible;
+    background: rgba(0,0,0,0.8);
+    
+    // Center the modal
+    Rectangle {
+        width: 400px;
+        height: 300px;
+        background: #252526;
+        border-radius: 10px;
+        
+        VerticalBox {
+            padding: 20px;
+            Text { text: "Settings", color: white; font-size: 20px; }
+            Text { text: "Settings will go here soon.", color: #888; }
+            Rectangle { } // Spacer
+            Button { 
+                text: "Close"; 
+                clicked => { root.close-clicked(); } 
+            }
+        }
+    }
+}

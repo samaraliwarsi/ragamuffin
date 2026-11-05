@@ -74,3 +74,18 @@ button[title="Open sidebar"] svg {
     color: #d4d4d4 !important;
     display: block !important;
 }
+
+/* --- FORCE SIDEBAR TO STAY OPEN --- */
+[data-testid="stSidebar"] {
+    transform: none !important;
+    margin-left: 0 !important;
+    width: 320px !important;
+    display: block !important;
+}
+
+/* Hide the toggle button completely since it's always open */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}

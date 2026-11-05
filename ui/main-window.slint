@@ -1,0 +1,82 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
+import { ChatMessage } from "chat-message.slint";
+import { SettingsPanel } from "settings-panel.slint";
+
+export struct MessageData {
+    role: string,
+    content: string,
+}
+
+export component MainWindow inherits Window {
+    title: "Ragamuffin";
+    width: 1000px;
+    height: 800px;
+    background: #1e1e1e;
+
+    in-out property <[MessageData]> messages: [];
+    in-out property <string> current-input: "";
+    in-out property <bool> is-loading: false;
+    in-out property <bool> settings-open: false;
+
+    callback send-message(string);
+    callback open-settings();
+
+    HorizontalBox {
+        // Sidebar
+        Rectangle {
+            width: 250px;
+            background: #252526;
+            VerticalBox {
+                padding: 15px;
+                Text { text: "Ragamuffin"; color: #d4d4d4; font-size: 18px; font-weight: 700; }
+                Button { text: "Settings"; clicked => { root.open-settings(); } }
+                Rectangle { } // Spacer
+            }
+        }
+
+        // Main Chat
+        VerticalBox {
+            ScrollView {
+                viewport-width: self.width;
+                viewport-height: self.height;
+                VerticalBox {
+                    padding: 20px;
+                    for msg in root.messages : ChatMessage {
+                        role: msg.role;
+                        content: msg.content;
+                    }
+                }
+            }
+
+            // Input
+            Rectangle {
+                height: 80px;
+                background: #252526;
+                padding: 15px;
+                HorizontalBox {
+                    spacing: 10px;
+                    LineEdit {
+                        text <=> root.current-input;
+                        placeholder-text: "Ask about your novel...";
+                        edited(text) => { root.current-input = text; }
+                    }
+                    Button {
+                        text: root.is-loading ? "Thinking..." : "Send";
+                        enabled: !root.is-loading;
+                        clicked => { 
+                            if (root.current-input != "") {
+                                root.send-message(root.current-input); 
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Settings Modal overlay
+    SettingsPanel {
+        visible: root.settings-open;
+        close-clicked => { root.settings-open = false; }
+    }
+}
