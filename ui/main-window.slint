@@ -17,28 +17,55 @@ export component MainWindow inherits Window {
     in-out property <string> current-input: "";
     in-out property <bool> is-loading: false;
     in-out property <bool> settings-open: false;
+    in-out property <bool> sidebar-open: true;
 
     callback send-message(string);
     callback open-settings();
+    callback sync-vault();
 
     HorizontalBox {
         // Sidebar
         Rectangle {
-            width: 250px;
+            width: root.sidebar-open ? 250px : 0px;
+            clip: true;
             background: #252526;
+            
             VerticalBox {
                 padding: 15px;
                 spacing: 10px;
                 Text { text: "Ragamuffin"; color: #d4d4d4; font-size: 18px; font-weight: 700; }
                 Button { text: "Settings"; clicked => { root.open-settings(); } }
+                Button { 
+                    text: "Hide Sidebar"; 
+                    clicked => { root.sidebar-open = false; } 
+                }
                 Rectangle { } // Spacer
             }
         }
 
         // Main Chat Area
         VerticalBox {
+            // Tell this box to take up all remaining horizontal space
+            horizontal-stretch: 1;
+
+            // Sidebar toggle row
+            HorizontalBox {
+                // 'visible' completely removes the space when false (unlike 'if')
+                visible: !root.sidebar-open; 
+                padding: 10px;
+                alignment: start; // Keep button to the left
+                
+                Button {
+                    text: "Show Sidebar";
+                    clicked => { root.sidebar-open = true; }
+                }
+            }
+            
             // 1. Scrollable Chat History
             ScrollView {
+                // Tell the scroll view to take up all remaining vertical space
+                vertical-stretch: 1; 
+                
                 VerticalLayout {
                     padding: 20px;
                     spacing: 10px;
@@ -56,11 +83,14 @@ export component MainWindow inherits Window {
                 HorizontalBox {
                     padding: 15px;
                     spacing: 10px;
+                    
                     LineEdit {
+                        horizontal-stretch: 1; // Force input to fill the width
                         text <=> root.current-input;
                         placeholder-text: "Ask about your novel...";
                         edited(text) => { root.current-input = text; }
                     }
+                    
                     Button {
                         text: root.is-loading ? "Thinking..." : "Send";
                         enabled: !root.is-loading;
@@ -79,5 +109,6 @@ export component MainWindow inherits Window {
     SettingsPanel {
         visible: root.settings-open;
         close-clicked => { root.settings-open = false; }
+        sync-clicked => { root.sync-vault(); }
     }
 }

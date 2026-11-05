@@ -1,14 +1,11 @@
-import { Button, VerticalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component SettingsPanel inherits Rectangle {
     callback close-clicked();
+    callback sync-clicked();
     
-    // NOTE: No 'visible' property needed here. 
-    // The parent window controls it.
+    background: #000000aa; 
     
-    background: #000000aa; // Semi-transparent black overlay
-    
-    // Center the modal
     Rectangle {
         width: 400px;
         height: 300px;
@@ -22,7 +19,14 @@ export component SettingsPanel inherits Rectangle {
             spacing: 10px;
             
             Text { text: "Settings"; color: #ffffff; font-size: 20px; }
-            Text { text: "Settings will go here soon."; color: #888888; }
+            
+            HorizontalBox {
+                spacing: 10px;
+                Button { 
+                    text: "🔄 Sync Vault to Database"; 
+                    clicked => { root.sync-clicked(); } 
+                }
+            }
             
             Rectangle { } // Spacer
             
