@@ -6,6 +6,7 @@ export component ChatMessage inherits Rectangle {
     callback copy-clicked(string);
     
     property <bool> is-copied: false;
+    property <bool> pulse-tick: false;
 
     height: self.preferred-height;
 
@@ -51,14 +52,27 @@ export component ChatMessage inherits Rectangle {
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
+            }          
+        }
+        if (root.content == "" && root.role == "assistant") : Text {
+            text: "Thinking...";
+            color: #888888;
+            font-size: 14px;
+            font-italic: true;
+            animate opacity { duration: 800ms; }
+            opacity: root.pulse-tick ? 1.0 : 0.4;
+            Timer {
+                interval: 800ms;
+                running: root.content == "" && root.role == "assistant";
+                triggered => { root.pulse-tick = !root.pulse-tick; }
             }
-            
         }
 
         Text {
             text: root.content;
             wrap: word-wrap;
             color: #ffffff;
+            vertical-alignment: top;
         }
 
         if (root.sources != "") : Text {
