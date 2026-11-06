@@ -23,43 +23,14 @@
 
 1. Clone the repository.
 2. Create and activate a virtual environment:
-
-    ```bash
-
-    python -m venv venv
-
-    .\venv\Scripts\activate  # Windows
-
-    source venv/bin/activate # Mac/Linux
-
-    ```
-
 3. Install dependencies:
-
-    ```bash
-
-    pip install -r requirements.txt
-
-    ```
 
 ## Usage
 
 1. Ensure the Ollama background service is running.
 2. Launch the app:
-
-    ```bash
-
-    python app.py
-
-    ```
-
 3. Open Settings, set your Vault path, and Sync Vault to Database.
 4. Start chatting.
+
 ## Backup UI
 A Streamlit-based fallback UI is located in the streamlit_backup/ folder. Launch it via:
-
-```bash
-
-streamlit run streamlit_backup/streamlit_app.py
-
-```
