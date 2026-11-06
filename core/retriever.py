@@ -48,7 +48,7 @@ def ask_ollama_stream(query, context, history, mode="Strict", keep_alive="5m", s
 
     messages = [{'role': 'system', 'content': system_prompt}]
     for msg in history:
-        messages.append[{'role': msg["role"], 'content': msg["content"]}]
+        messages.append({'role': msg["role"], 'content': msg["content"]})
 
     user_prompt = f"""Context from the novel's notes:
 {context}

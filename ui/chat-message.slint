@@ -7,6 +7,8 @@ export component ChatMessage inherits Rectangle {
     
     property <bool> is-copied: false;
 
+    height: self.preferred-height;
+
     background: role == "user" ? #2d2d2d : #1e1e1e;
     border-radius: 8px;
 

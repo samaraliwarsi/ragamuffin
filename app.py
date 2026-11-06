@@ -1,6 +1,6 @@
 import os
 os.environ["SLINT_BACKEND"] = "winit-femtovg" # WINDOWS
-# os.environ["SLINT_BACKEND"] = "winit-femtovg-wgpu" (WHEN ON MAC)
+# os.environ["SLINT_BACKEND"] = "winit-femtovg-wgpu" # MAC
 import slint
 import json
 import threading
@@ -12,11 +12,6 @@ import tkinter as tk
 import re
 
 CONFIG_FILE = "config.json"
-
-def format_slint_markdown(text):
-    text = re.sub(r'^#+\s*(.*)$', r'<b>\1</b>', text, flags=re.MULTILINE)
-    text = re.sub(r'^\s*-\s*(.*)$', r'• \1', text, flags=re.MULTILINE)
-    return text
 
 class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
     def __init__(self):
@@ -96,10 +91,9 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                         self.is_loading = False
                     elif action == "stream_chunk":
                         self.streaming_content += payload
-                        formatted = format_slint_markdown(self.streaming_content)
                         current_list = self.get_messages_as_dicts()
                         if current_list:
-                            current_list[-1]["content"] = formatted
+                            current_list[-1]["content"] = self.streaming_content
                             self.messages = slint.ListModel(current_list)
                     elif action == "stream_done":
                         self.save_history()
