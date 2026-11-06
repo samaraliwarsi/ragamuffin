@@ -6,15 +6,22 @@ import json
 import threading
 import queue
 import datetime
-from core.retriever import get_context, ask_ollama, get_all_sources
+from core.retriever import get_context, ask_ollama_stream, get_all_sources
 from core.indexer import build_index
 import tkinter as tk
+import re
 
 CONFIG_FILE = "config.json"
+
+def format_slint_markdown(text):
+    text = re.sub(r'^#+\s*(.*)$', r'<b>\1</b>', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*-\s*(.*)$', r'• \1', text, flags=re.MULTILINE)
+    return text
 
 class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
     def __init__(self):
         super().__init__()
+        self.streaming_content = ""
         self.history_file = "chat_history.json"
         
         if not os.path.exists(self.history_file):
@@ -25,10 +32,7 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         self.messages = slint.ListModel(loaded_history)
         self.load_anchor_files()
 
-        # Load Config
         self.config = self.load_config()
-
-        # Set Defaults
         self.default_prompt = """You are an expert lore keeper and creative writing partner for a novelist. Answer the user's question using ONLY the provided context from their notes. When brainstorming or ideating, separate canon facts from new ideas clearly."""
         self.vault_path = self.config.get("vault_path", "")
         self.system_prompt = self.config.get("system_prompt") or self.default_prompt
@@ -36,10 +40,33 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         self.keep_alive = self.config.get("keep_alive") or "5m"
         self.history_limit = str(self.config.get("history_limit", 10))
 
-        # Thread-safe queue for UI updates
         self.ui_queue = queue.Queue()
         self.timer = slint.Timer()
         self.timer.start(slint.TimerMode.Repeated, datetime.timedelta(milliseconds=100), self.process_ui_queue)
+
+    # ---- HELPER FOR SAFE LIST ACCESS ---
+    def get_messages_as_dicts(self):
+        result = []
+        for m in self.messages:
+            if hasattr(m, "role"):
+                result.append({
+                    "role": m.role, 
+                    "content": m.content, 
+                    "sources": getattr(m, "sources", "")
+                })
+            else:
+                result.append({
+                    "role": m.get("role", "user"), 
+                    "content": m.get("content", ""), 
+                    "sources": m.get("sources", "")
+                })
+        return result
+
+    def get_anchor_name(self, f):
+        return getattr(f, "name", f.get("name") if isinstance(f, dict) else "")
+
+    def get_anchor_selected(self, f):
+        return getattr(f, "selected", f.get("selected") if isinstance(f, dict) else False) 
 
     def load_config(self):
         if os.path.exists(CONFIG_FILE):
@@ -63,16 +90,19 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                         self.notification = ""
                     elif action == "reload_anchors":
                         self.load_anchor_files()
-                    elif action == "message_response":
-                        answer, sources_str = payload
-                        self.messages.append({
-                            "role": "assistant", 
-                            "content": answer,
-                            "sources": sources_str
-                        })
-
-                        self.save_history()
+                    elif action == "stream_start":
+                        self.streaming_content = ""
+                        self.messages.append({"role": "assistant", "content": "", "sources": payload})
                         self.is_loading = False
+                    elif action == "stream_chunk":
+                        self.streaming_content += payload
+                        formatted = format_slint_markdown(self.streaming_content)
+                        current_list = self.get_messages_as_dicts()
+                        if current_list:
+                            current_list[-1]["content"] = formatted
+                            self.messages = slint.ListModel(current_list)
+                    elif action == "stream_done":
+                        self.save_history()
         except queue.Empty:
             pass
 
@@ -86,14 +116,7 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
             return json.load(f)
 
     def save_history(self):
-        data = []
-        for m in self.messages:
-            role = getattr(m, "role", m.get("role") if isinstance(m, dict) else "user")
-            content = getattr(m, "content", m.get("content") if isinstance(m, dict) else "")
-            sources = getattr(m, "sources", m.get("sources", "") if isinstance(m, dict) else "")
-
-            data.append({"role": role, "content": content, "sources": sources})
-
+        data = self.get_messages_as_dicts()
         with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
@@ -111,7 +134,6 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
 
     @slint.callback
     def save_settings(self, path, prompt, mode, keepalive, limit):
-        # Save everything to config
         self.config["vault_path"] = path
         self.config["system_prompt"] = prompt or self.default_prompt
         self.config["mode"] = mode or "Strict"
@@ -123,7 +145,6 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
 
         self.save_config()
         
-        # Update local properties
         self.vault_path = path
         self.system_prompt = self.config["system_prompt"]
         self.mode = self.config["mode"]
@@ -137,25 +158,27 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
     def toggle_anchor(self, file_name):
         new_list = []
         for f in self.anchor_files:
-            if f["name"] == file_name:
-                new_list.append({"name": f["name"], "selected": not f["selected"]})
+            name = self.get_anchor_name(f)
+            selected = self.get_anchor_selected(f)
+            if name == file_name:
+                new_list.append({"name": name, "selected": not selected})
             else:
-                new_list.append({"name": f["name"], "selected": f["selected"]})
+                new_list.append({"name": name, "selected": selected})
         self.anchor_files = slint.ListModel(new_list)
 
     @slint.callback
     def clear_anchors(self):
-        new_list = [{"name": f["name"], "selected": False} for f in self.anchor_files]
+        new_list = [{"name": self.get_anchor_name(f), "selected": False} for f in self.anchor_files]
         self.anchor_files = slint.ListModel(new_list)
 
     @slint.callback
     def copy_text(self, text):
         try:
             r = tk.Tk()
-            r.withdraw() # Hides the tiny blank window
+            r.withdraw()
             r.clipboard_clear()
             r.clipboard_append(text)
-            r.update() # Pushes to OS clipboard
+            r.update()
             r.destroy()
         except Exception as e:
             print(f"Failed to copy: {e}")
@@ -165,32 +188,45 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         self.is_loading = True
         self.current_input = ""
         self.messages.append({"role": "user", "content": text, "sources": ""})
-        self.save_history()
         
-        selected_anchors = [f["name"] for f in self.anchor_files if f["selected"]]
+        current_list = self.get_messages_as_dicts()
+        history_msgs = current_list[:-1]
 
+        try: 
+            limit = int(self.history_limit)
+        except ValueError:
+            limit = 10
+
+        recent_history = history_msgs[-limit:] if limit > 0 else []
+        history_payload = [{"role": m["role"], "content": m["content"]} for m in recent_history]
+        
+        selected_anchors = [self.get_anchor_name(f) for f in self.anchor_files if self.get_anchor_selected(f)]
         safe_queue = self.ui_queue
         mode = self.mode
-
         keep_alive = self.keep_alive if self.keep_alive else "5m" 
         system_prompt = self.system_prompt
 
-        def run_query(query, anchors, m, ka, sp, q):
+        def run_query(query, anchors, hist, m, ka, sp, q):
             try:
-                context, metadata = get_context(text, n_results=6, anchor_files=selected_anchors)
-                answer = ask_ollama(text, context, mode=m, keep_alive=ka, system_prompt=sp)
-
+                context, metadata = get_context(query, n_results=6, anchor_files=anchors)
                 unique_sources = list(set(meta['source'] for meta in metadata))
                 sources_str = ", ".join(unique_sources)
-
+                
+                q.put(("stream_start", sources_str))
+                
+                for chunk in ask_ollama_stream(query, context, hist, m, ka, sp):
+                    q.put(("stream_chunk", chunk))
+                
+                q.put(("stream_done", None))
+                
             except Exception as e:
-                answer = f"Error: {str(e)}"
-                sources_str = ""
-
-            q.put(("message_response", (answer, sources_str)))
+                q.put(("stream_start", ""))
+                q.put(("stream_chunk", f"Error: {str(e)}"))
+                q.put(("stream_done", None))
+                
         threading.Thread(
             target=run_query,
-            args=(text, selected_anchors, mode, keep_alive, system_prompt, safe_queue)
+            args=(text, selected_anchors, history_payload, mode, keep_alive, system_prompt, safe_queue)
         ).start()
         
     @slint.callback

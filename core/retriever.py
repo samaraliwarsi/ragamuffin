@@ -38,31 +38,35 @@ def get_context(query, n_results=6, anchor_files=None):
         
     return context_string, metadata_list
 
-def ask_ollama(query, context, mode="Strict", keep_alive="5m", system_prompt=""):
-    # Determine temperature based on mode
+def ask_ollama_stream(query, context, history, mode="Strict", keep_alive="5m", system_prompt=""):
     temp = 0.1 if mode == "Strict" else 0.7
     
-    # Default system prompt if empty
     if not system_prompt.strip():
         system_prompt = """You are an expert lore keeper and creative writing partner for a novelist. 
-Answer the user's question using ONLY the provided context from their notes. 
-When brainstorming or ideating, separate canon facts from new ideas clearly."""
+        Answer the user's question using ONLY the provided context from their notes. 
+        When brainstorming or ideating, separate canon facts from new ideas clearly."""
+
+    messages = [{'role': 'system', 'content': system_prompt}]
+    for msg in history:
+        messages.append[{'role': msg["role"], 'content': msg["content"]}]
 
     user_prompt = f"""Context from the novel's notes:
 {context}
 
 User Question: {query}"""
 
-    response = ollama.chat(
+    messages.append({'role': 'user', 'content': user_prompt})
+
+    stream = ollama.chat(
         model=CHAT_MODEL,
-        messages=[
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': user_prompt}
-        ],
+        messages=messages,
         options={'temperature': temp, 'num_ctx': 8192},
-        keep_alive=keep_alive
+        keep_alive=keep_alive,
+        stream=True
     )
-    return response['message']['content']
+
+    for chunk in stream:
+        yield chunk['message']['content']
 
 
 def get_all_sources():
