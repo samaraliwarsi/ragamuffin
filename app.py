@@ -1,5 +1,7 @@
-import slint
 import os
+os.environ["SLINT_BACKEND"] = "winit-femtovg" # WINDOWS
+# os.environ["SLINT_BACKEND"] = "winit-femtovg-wgpu" (WHEN ON MAC)
+import slint
 import json
 import threading
 import queue
@@ -62,7 +64,12 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                     elif action == "reload_anchors":
                         self.load_anchor_files()
                     elif action == "message_response":
-                        self.messages.append({"role": "assistant", "content": payload})
+                        answer, sources_str = payload
+                        self.messages.append({
+                            "role": "assistant", 
+                            "content": answer,
+                            "sources": sources_str
+                        })
 
                         self.save_history()
                         self.is_loading = False
@@ -81,10 +88,11 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
     def save_history(self):
         data = []
         for m in self.messages:
-            if hasattr(m, "role"):
-                data.append({"role": m.role, "content": m.content})
-            else:
-                data.append({"role": m["role"], "content": m["content"]})
+            role = getattr(m, "role", m.get("role") if isinstance(m, dict) else "user")
+            content = getattr(m, "content", m.get("content") if isinstance(m, dict) else "")
+            sources = getattr(m, "sources", m.get("sources", "") if isinstance(m, dict) else "")
+
+            data.append({"role": role, "content": content, "sources": sources})
 
         with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
@@ -156,7 +164,7 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
     def send_message(self, text):
         self.is_loading = True
         self.current_input = ""
-        self.messages.append({"role": "user", "content": text})
+        self.messages.append({"role": "user", "content": text, "sources": ""})
         self.save_history()
         
         selected_anchors = [f["name"] for f in self.anchor_files if f["selected"]]
@@ -170,19 +178,16 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         def run_query(query, anchors, m, ka, sp, q):
             try:
                 context, metadata = get_context(text, n_results=6, anchor_files=selected_anchors)
-                
-                # Ask Ollama using the new settings
-                answer = ask_ollama(
-                    text, 
-                    context,
-                    mode=m,
-                    keep_alive=ka, 
-                    system_prompt=sp
-                )
+                answer = ask_ollama(text, context, mode=m, keep_alive=ka, system_prompt=sp)
+
+                unique_sources = list(set(meta['source'] for meta in metadata))
+                sources_str = ", ".join(unique_sources)
+
             except Exception as e:
                 answer = f"Error: {str(e)}"
+                sources_str = ""
 
-            q.put(("message_response", answer))
+            q.put(("message_response", (answer, sources_str)))
         threading.Thread(
             target=run_query,
             args=(text, selected_anchors, mode, keep_alive, system_prompt, safe_queue)

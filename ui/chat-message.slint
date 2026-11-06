@@ -1,8 +1,8 @@
-import { Button, TextEdit } from "std-widgets.slint";
 
 export component ChatMessage inherits Rectangle {
     in property <string> role: "user";
     in property <string> content: "";
+    in property <string> sources: "";
     callback copy-clicked(string);
     
     property <bool> is-copied: false;
@@ -57,6 +57,13 @@ export component ChatMessage inherits Rectangle {
             text: root.content;
             wrap: word-wrap;
             color: #ffffff;
+        }
+
+        if (root.sources != "") : Text {
+            text: "Sources: " + root.sources;
+            color: #7F6DF2;
+            font-size: 11px;
+            wrap: word-wrap;
         }
     }
 }
