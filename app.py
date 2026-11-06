@@ -18,6 +18,7 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         super().__init__()
         self.streaming_content = ""
         self.history_file = "chat_history.json"
+        self.cancel_event = threading.Event()
         
         if not os.path.exists(self.history_file):
             with open(self.history_file, "w", encoding="utf-8") as f:
@@ -88,7 +89,6 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                     elif action == "stream_start":
                         self.streaming_content = ""
                         self.messages.append({"role": "assistant", "content": "", "sources": payload})
-                        self.is_loading = False
                     elif action == "stream_chunk":
                         self.streaming_content += payload
                         current_list = self.get_messages_as_dicts()
@@ -96,6 +96,7 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                             current_list[-1]["content"] = self.streaming_content
                             self.messages = slint.ListModel(current_list)
                     elif action == "stream_done":
+                        self.is_loading = False
                         self.save_history()
         except queue.Empty:
             pass
@@ -113,6 +114,10 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         data = self.get_messages_as_dicts()
         with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
+
+    @slint.callback
+    def stop_generation(self):
+        self.cancel_event.set()
 
     @slint.callback
     def open_settings(self):
@@ -180,6 +185,7 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
     @slint.callback
     def send_message(self, text):
         self.is_loading = True
+        self.cancel_event.clear()
         self.current_input = ""
         self.messages.append({"role": "user", "content": text, "sources": ""})
         
@@ -200,7 +206,7 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         keep_alive = self.keep_alive if self.keep_alive else "5m" 
         system_prompt = self.system_prompt
 
-        def run_query(query, anchors, hist, m, ka, sp, q):
+        def run_query(query, anchors, hist, m, ka, sp, q, cancel_evt):
             try:
                 context, metadata = get_context(query, n_results=6, anchor_files=anchors)
                 unique_sources = list(set(meta['source'] for meta in metadata))
@@ -209,18 +215,19 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                 q.put(("stream_start", sources_str))
                 
                 for chunk in ask_ollama_stream(query, context, hist, m, ka, sp):
+                    if cancel_evt.is_set():
+                        break
                     q.put(("stream_chunk", chunk))
-                
-                q.put(("stream_done", None))
                 
             except Exception as e:
                 q.put(("stream_start", ""))
                 q.put(("stream_chunk", f"Error: {str(e)}"))
+            finally:
                 q.put(("stream_done", None))
                 
         threading.Thread(
             target=run_query,
-            args=(text, selected_anchors, history_payload, mode, keep_alive, system_prompt, safe_queue)
+            args=(text, selected_anchors, history_payload, mode, keep_alive, system_prompt, safe_queue, self.cancel_event)
         ).start()
         
     @slint.callback

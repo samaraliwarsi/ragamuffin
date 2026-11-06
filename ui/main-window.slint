@@ -46,6 +46,7 @@ export component MainWindow inherits Window {
     callback clear-anchors();
     callback save-settings(string, string, string, string, string);
     callback copy-text(string);
+    callback stop-generation();
 
     HorizontalBox {
         // Sidebar
@@ -207,10 +208,11 @@ export component MainWindow inherits Window {
                         }
                     }
                     Button {
-                        text: root.is-loading ? "Thinking..." : "Send";
-                        enabled: !root.is-loading;
-                        clicked => { 
-                            if (root.current-input != "") {
+                        text: root.is-loading ? "Stop" : "Send";
+                        clicked => {
+                            if (root.is-loading) {
+                                root.stop-generation()
+                            } else if (root.current-input != "") {
                                 root.send-message(root.current-input); 
                             }
                         }
