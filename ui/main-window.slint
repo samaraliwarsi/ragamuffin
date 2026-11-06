@@ -27,13 +27,19 @@ export component MainWindow inherits Window {
     in-out property <bool> anchors-open: false; 
     in-out property <string> notification: "";
     in-out property <string> vault-path: "";
+    in-out property <string> system-prompt: "";
+    in-out property <string> mode: "Strict";
+    in-out property <string> keep-alive: "5m";
+    in-out property <string> history-limit: "10";
+    
 
     callback send-message(string);
     callback open-settings();
     callback sync-vault();
     callback toggle-anchor(string); 
     callback clear-anchors();
-    callback save-vault-path(string);
+    callback save-settings(string, string, string, string, string);
+    callback copy-text(string);
 
     HorizontalBox {
         // Sidebar
@@ -169,6 +175,7 @@ export component MainWindow inherits Window {
                     for msg in root.messages : ChatMessage {
                         role: msg.role;
                         content: msg.content;
+                        copy-clicked(text) => { root.copy-text(text); }
                     }
                 }
             }
@@ -184,6 +191,13 @@ export component MainWindow inherits Window {
                         text <=> root.current-input;
                         placeholder-text: "Ask about your novel...";
                         edited(text) => { root.current-input = text; }
+
+                        accepted(text) => {
+                            if (text != "") {
+                                root.send-message(text);
+                                root.current-input = "";
+                            }
+                        }
                     }
                     Button {
                         text: root.is-loading ? "Thinking..." : "Send";
@@ -203,7 +217,16 @@ export component MainWindow inherits Window {
         visible: root.settings-open;
         close-clicked => { root.settings-open = false; }
         sync-clicked => { root.sync-vault(); }
-        vault-path: root.vault-path; 
-        save-path-clicked(path) => { root.save-vault-path(path); }
+        
+        vault-path: root.vault-path;
+        system-prompt: root.system-prompt;
+        mode: root.mode;
+        keep-alive: root.keep-alive;
+        history-limit: root.history-limit;
+        
+        // This passes all 5 settings back to Python
+        save-settings-clicked(path, prompt, mode, keepalive, limit) => { 
+            root.save-settings(path, prompt, mode, keepalive, limit); 
+        }
     }
 }

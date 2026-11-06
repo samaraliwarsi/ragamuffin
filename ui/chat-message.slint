@@ -1,23 +1,62 @@
+import { Button, TextEdit } from "std-widgets.slint";
+
 export component ChatMessage inherits Rectangle {
     in property <string> role: "user";
     in property <string> content: "";
+    callback copy-clicked(string);
     
-    height: text-layout.preferred-height + 40px;
+    property <bool> is-copied: false;
+
     background: role == "user" ? #2d2d2d : #1e1e1e;
     border-radius: 8px;
+
+    Timer {
+        interval: 1500ms;
+        running: root.is-copied;
+        triggered => { root.is-copied = false; }
+    }
 
     VerticalLayout {
         padding: 10px;
         spacing: 5px;
-        Text { 
-            text: role == "user" ? "You" : "AI"; 
-            color: #888888; 
-            font-size: 12px; 
+
+        HorizontalLayout {
+            spacing: 5px;
+            Text { 
+                text: role == "user" ? "You" : "AI"; 
+                color: #888888; 
+                font-size: 14px; 
+            }
+
+            Rectangle { horizontal-stretch: 1; } // Spacer
+
+            Rectangle {
+                width: 40px;
+                height: 18px;
+                border-radius: 4px;
+                background: copy-area.has-hover ? #444444 : transparent;
+                copy-area := TouchArea {
+                    clicked => { 
+                        root.copy-clicked(root.content);
+                        root.is-copied = true;
+                    }
+                }
+
+                Text {
+                    text: root.is-copied ? "Copied!" : "Copy";
+                    color: root.is-copied ? #7F6DF2 : (copy-area.has-hover ? #ffffff : #666666);
+                    font-size: 11px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+            
         }
-        text-layout := Text { 
-            text: root.content; 
-            color: #ffffff; 
-            wrap: word-wrap; 
+
+        Text {
+            text: root.content;
+            wrap: word-wrap;
+            color: #ffffff;
         }
     }
 }

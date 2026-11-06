@@ -38,10 +38,14 @@ def get_context(query, n_results=6, anchor_files=None):
         
     return context_string, metadata_list
 
-def ask_ollama(query, context, temp=0.3, keep_alive="5m"):
-    system_prompt = """You are an expert lore keeper and creative writing partner for a novelist. 
+def ask_ollama(query, context, mode="Strict", keep_alive="5m", system_prompt=""):
+    # Determine temperature based on mode
+    temp = 0.1 if mode == "Strict" else 0.7
+    
+    # Default system prompt if empty
+    if not system_prompt.strip():
+        system_prompt = """You are an expert lore keeper and creative writing partner for a novelist. 
 Answer the user's question using ONLY the provided context from their notes. 
-If the answer is not in the context, say "I cannot find that in the provided notes."
 When brainstorming or ideating, separate canon facts from new ideas clearly."""
 
     user_prompt = f"""Context from the novel's notes:
