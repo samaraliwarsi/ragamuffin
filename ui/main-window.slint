@@ -191,13 +191,15 @@ export component MainWindow inherits Window {
             Rectangle {
                 height: 80px;
                 background: #252526;
-                HorizontalBox {
+                HorizontalLayout {
                     padding: 15px;
                     spacing: 10px;
+                    cross-axis-alignment: center;
+
                     LineEdit {
-                        horizontal-stretch: 1; 
+                        horizontal-stretch: 1;
                         text <=> root.current-input;
-                        placeholder-text: "Ask about your novel...";
+                        placeholder-text: "Type your query...";
                         edited(text) => { root.current-input = text; }
 
                         accepted(text) => {
@@ -207,14 +209,34 @@ export component MainWindow inherits Window {
                             }
                         }
                     }
-                    Button {
-                        text: root.is-loading ? "Stop" : "Send";
-                        clicked => {
-                            if (root.is-loading) {
-                                root.stop-generation()
-                            } else if (root.current-input != "") {
-                                root.send-message(root.current-input); 
+                    Rectangle {
+                        width: 70px;
+                        height: 32px;
+                        border-radius: 6px;
+
+                        animate background { duration: 100ms; }
+
+                        background: btn-touch.pressed ? 
+                            (root.is-loading ? #a02824 : #4b3fa6) : 
+                            (btn-touch.has-hover ? 
+                                (root.is-loading ? #c9302c : #6a5acd) : 
+                                (root.is-loading ? #d9534f : #7f6df2));
+                        
+                        btn-touch := TouchArea {
+                            clicked => {
+                                if (root.is-loading) {
+                                    root.stop-generation();
+                                } else if (root.current-input != "") {
+                                    root.send-message(root.current-input);
+                                }
                             }
+                        }
+                        Text {
+                            text: root.is-loading ? "Stop" : "Send";
+                            color: #ffffff;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
                         }
                     }
                 }
