@@ -2,16 +2,16 @@
 
   A local, privacy-first RAG (Retrieval-Augmented Generation) desktop application designed specifically for querying an Obsidian vault. Built for novelists and worldbuilders who want to chat with their notes without sending data to the cloud.
 
-  ## Features
-
+## Features
 - **True Local Execution:** Uses Ollama for chat generation and embeddings.
+- **Native Markdown Rendering:** Parses Markdown (headers, bold, italics, lists) natively using Slint's `StyledText` API, without relying on webviews.
 - **Frontmatter Stripping:** Automatically ignores YAML metadata so it doesn't pollute vector search.
 - **Incremental Sync:** Uses MD5 hashing to only re-index files that have changed.
 - **Multi-File Anchoring:** Force specific chapters or character sheets into the context window.
 - **VRAM Management:** Hard-capped context windows and Ollama `keep_alive` timers to prevent GPU overflow.
 - **Chat Persistence:** Rolling chat history that survives app restarts.
 - **Stop Generation:** Instantly halt the AI mid-stream.
-- **Native Desktop UI:** Built with Slint for a lightweight, low-RAM footprint. (Note: Renders raw text; Markdown styling is not yet supported by the framework's Python bindings).
+- **Lightweight Native UI:** Built with Slint for a low-RAM footprint.
 
 ## Prerequisites
 
