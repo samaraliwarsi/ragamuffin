@@ -1,3 +1,4 @@
+// main-window.slint
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
 import { ChatMessage } from "chat-message.slint";
 import { SettingsPanel } from "settings-panel.slint";
@@ -17,12 +18,11 @@ export struct AnchorFile {
 
 export component MainWindow inherits Window {
     title: "RAGamuffin";
+    icon: @image-url("icon.png");
     preferred-width: 1100px; // Default starter
     preferred-height: 800px; // Default starter
-    // Minimums
     min-width: 600px;
     min-height: 400px;
-    //maximized: false;
     background: #1e1e1e;
 
     in-out property <[MessageData]> messages: [];
@@ -38,6 +38,7 @@ export component MainWindow inherits Window {
     in-out property <string> mode: "Strict";
     in-out property <string> keep-alive: "5m";
     in-out property <string> history-limit: "10";
+    in-out property <bool> auto-scroll: true;
     
 
     callback send-message(string);
@@ -60,7 +61,7 @@ export component MainWindow inherits Window {
                 padding: 15px;
                 spacing: 10px;
                 
-                Text { text: "Ragamuffin"; color: #d4d4d4; font-size: 18px; font-weight: 700; }
+                Text { text: "RAGamuffin"; color: #d4d4d4; font-size: 18px; font-weight: 700; }
                 
                 HorizontalBox {
                     height: 40px; 
@@ -99,7 +100,6 @@ export component MainWindow inherits Window {
                     
                     ScrollView {
                         vertical-stretch: 1;
-                        
                         VerticalLayout {
                             spacing: 5px;
                             for file in root.anchor-files : Rectangle {
@@ -175,8 +175,18 @@ export component MainWindow inherits Window {
                 }
             }
             
-            ScrollView {
-                vertical-stretch: 1; 
+            chat-scroll-view := ScrollView {
+                vertical-stretch: 1;
+                
+                scrolled => {
+                    root.auto-scroll = (self.content-y >= min(0px, -self.content-height + self.visible-height) - 20px);
+                };
+                changed content-height => {
+                    if (root.auto-scroll) {
+                        self.content-y = min(0px, -self.content-height + self.visible-height);
+                    }
+                }
+                
                 VerticalLayout {
                     padding: 20px;
                     spacing: 10px;
@@ -206,6 +216,7 @@ export component MainWindow inherits Window {
 
                         accepted(text) => {
                             if (text != "") {
+                                root.auto-scroll = true;
                                 root.send-message(text);
                                 root.current-input = "";
                             }
@@ -229,6 +240,7 @@ export component MainWindow inherits Window {
                                 if (root.is-loading) {
                                     root.stop-generation();
                                 } else if (root.current-input != "") {
+                                    root.auto-scroll = true;
                                     root.send-message(root.current-input);
                                 }
                             }
