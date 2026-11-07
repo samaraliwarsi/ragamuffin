@@ -177,30 +177,64 @@ export component MainWindow inherits Window {
                 }
             }
             
-            chat-scroll-view := ScrollView {
+            Rectangle {
                 vertical-stretch: 1;
-                
-                scrolled => {
-                    root.auto-scroll = (self.content-y >= min(0px, -self.content-height + self.visible-height) - 20px);
-                };
-                changed content-height => {
-                    if (root.auto-scroll) {
-                        self.content-y = min(0px, -self.content-height + self.visible-height);
+                chat-scroll-view := ScrollView {
+                    scrolled => {
+                        root.auto-scroll = (self.content-y <= min(0px, -self.content-height + self.visible-height) + 20px);
+                    };
+                    changed content-height => {
+                        if (root.auto-scroll) {
+                            self.content-y = min(0px, -self.content-height + self.visible-height);
+                        }
+                    }
+                    
+                    VerticalLayout {
+                        padding: 20px;
+                        spacing: 10px;
+                        for msg in root.messages : ChatMessage {
+                            role: msg.role;
+                            content: msg.content;
+                            sources: msg.sources;
+                            formatted-message: msg.formatted-message;
+                            copy-clicked(text) => { root.copy-text(text); }
+                        }
                     }
                 }
-                
-                VerticalLayout {
-                    padding: 20px;
-                    spacing: 10px;
-                    for msg in root.messages : ChatMessage {
-                        role: msg.role;
-                        content: msg.content;
-                        sources: msg.sources;
-                        formatted-message: msg.formatted-message;
-                        copy-clicked(text) => { root.copy-text(text); }
+                // --- FLOATING SCROLL TO BOTTOM BUTTON ---
+                if (!root.auto-scroll) : Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 10px;
+                    
+                    x: parent.width - self.width - 20px;
+                    y: parent.height - self.height - 20px;
+                    z: 10;
+                    
+                    animate background { duration: 100ms; }
+                    background: scroll-btn.has-hover ? #6a5acdcc : #7F6DF2cc;
+
+                    border-width: 1px;
+                    border-color: #ffffff33;
+                    
+                    scroll-btn := TouchArea {
+                        clicked => { 
+                            root.auto-scroll = true;
+                            chat-scroll-view.content-y = min(0px, -chat-scroll-view.content-height + chat-scroll-view.visible-height);
+                        }
+                    }
+                    
+                    Text {
+                        text: "↓";
+                        color: #ffffff;
+                        font-size: 14px;
+                        font-weight: 800;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
                     }
                 }
             }
+            
 
             Rectangle {
                 height: 80px;
