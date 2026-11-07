@@ -49,6 +49,7 @@ export component MainWindow inherits Window {
     callback save-settings(string, string, string, string, string);
     callback copy-text(string);
     callback stop-generation();
+    callback clear-history();
 
     HorizontalBox {
         // Sidebar
@@ -67,6 +68,7 @@ export component MainWindow inherits Window {
                     height: 40px; 
                     spacing: 5px;
                     Button { text: "Settings"; clicked => { root.open-settings(); } }
+                    Button { text: "Clear"; clicked => { root.clear-history(); } }
                     Button { text: "Hide"; clicked => { root.sidebar-open = false; } }
                 }
 

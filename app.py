@@ -156,6 +156,13 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
             json.dump(data, f, indent=4)
 
     @slint.callback
+    def clear_history(self):
+        self.messages = slint.ListModel([])
+        self.save_history()
+        self.ui_queue.put(("notification", "Chat history cleared!"))
+        threading.Timer(3.0, lambda: self.ui_queue.put(("clear_notification", None))).start()
+
+    @slint.callback
     def stop_generation(self):
         self.cancel_event.set()
 
@@ -256,9 +263,9 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                 context, metadata = get_context(query, n_results=6, anchor_files=anchors)
                 unique_sources = list(set(meta['source'] for meta in metadata))
                 sources_str = ", ".join(unique_sources)
-                
+                    
                 q.put(("stream_start", sources_str))
-                
+                    
                 for chunk in ask_ollama_stream(query, context, hist, m, ka, sp):
                     if cancel_evt.is_set():
                         break
