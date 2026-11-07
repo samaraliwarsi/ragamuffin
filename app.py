@@ -9,6 +9,7 @@ import datetime
 from core.retriever import get_context, ask_ollama_stream, get_all_sources
 from core.indexer import build_index
 import tkinter as tk
+from slint import StyledText
 import re
 
 CONFIG_FILE = "config.json"
@@ -25,6 +26,8 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                 json.dump([], f)
         
         loaded_history = self.load_history()
+        for m in loaded_history:
+            m["formatted_message"] = self._parse_markdown(m.get("content", ""))
         self.messages = slint.ListModel(loaded_history)
         self.load_anchor_files()
 
@@ -45,17 +48,20 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         result = []
         for m in self.messages:
             if hasattr(m, "role"):
-                result.append({
-                    "role": m.role, 
-                    "content": m.content, 
-                    "sources": getattr(m, "sources", "")
-                })
+                role = m.role
+                content = m.content
+                sources = getattr(m, "sources", "")
             else:
-                result.append({
-                    "role": m.get("role", "user"), 
-                    "content": m.get("content", ""), 
-                    "sources": m.get("sources", "")
-                })
+                role = m.get("role", "user")
+                content = m.get("content", "")
+                sources = m.get("sources", "")
+            
+            result.append({
+                "role": role, 
+                "content": content, 
+                "sources": sources,
+                "formatted_message": self._parse_markdown(content) # <--- ADD THIS
+            })
         return result
 
     def get_anchor_name(self, f):
@@ -74,6 +80,21 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         with open(CONFIG_FILE, "w") as f:
             json.dump(self.config, f, indent=4)
 
+
+    def _parse_markdown(self, text: str) -> StyledText:
+        if not text:
+            return StyledText.from_plain_text("")
+        
+        clean_text = re.sub(r'<[^>]+>', '', text)
+        clean_text = re.sub(r'^#{1,6}\s+', '', clean_text, flags=re.MULTILINE)
+        clean_text = re.sub(r'^---+$', '', clean_text, flags=re.MULTILINE)
+        clean_text = re.sub(r'^>\s+', '', clean_text, flags=re.MULTILINE) 
+        try:
+            return StyledText.from_markdown(clean_text)
+        except ValueError:
+            print(f"DEBUG: StyledText failed to parse Markdown. Falling back to plain text.")
+            return StyledText.from_plain_text(clean_text)
+
     def process_ui_queue(self):
         try:
             while True:
@@ -88,15 +109,26 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
                         self.load_anchor_files()
                     elif action == "stream_start":
                         self.streaming_content = ""
-                        self.messages.append({"role": "assistant", "content": "", "sources": payload})
+                        current_list = self.get_messages_as_dicts()
+                        current_list.append({
+                            "role": "assistant", 
+                            "content": "", 
+                            "sources": payload,
+                            "formatted_message": self._parse_markdown("") # <--- ADD THIS
+                        })
+                        self.messages = slint.ListModel(current_list)
                     elif action == "stream_chunk":
                         self.streaming_content += payload
                         current_list = self.get_messages_as_dicts()
                         if current_list:
                             current_list[-1]["content"] = self.streaming_content
+                            # Parse live markdown
+                            current_list[-1]["formatted_message"] = self._parse_markdown(self.streaming_content) 
                             self.messages = slint.ListModel(current_list)
                     elif action == "stream_done":
                         self.is_loading = False
+                        current_list = self.get_messages_as_dicts()
+                        self.messages = slint.ListModel(current_list)
                         self.save_history()
         except queue.Empty:
             pass
@@ -111,7 +143,15 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
             return json.load(f)
 
     def save_history(self):
-        data = self.get_messages_as_dicts()
+        # Strip out formatted_message because StyledText cannot be serialized to JSON
+        data = []
+        for m in self.get_messages_as_dicts():
+            data.append({
+                "role": m["role"],
+                "content": m["content"],
+                "sources": m["sources"]
+            })
+            
         with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
@@ -187,9 +227,14 @@ class RagamuffinApp(slint.loader.ui.main_window.MainWindow):
         self.is_loading = True
         self.cancel_event.clear()
         self.current_input = ""
-        self.messages.append({"role": "user", "content": text, "sources": ""})
-        
         current_list = self.get_messages_as_dicts()
+        current_list.append({
+            "role": "user", 
+            "content": text, 
+            "sources": "",
+            "formatted_message": self._parse_markdown(text)
+        })
+        self.messages = slint.ListModel(current_list)
         history_msgs = current_list[:-1]
 
         try: 

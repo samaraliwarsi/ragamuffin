@@ -3,6 +3,7 @@ export component ChatMessage inherits Rectangle {
     in property <string> role: "user";
     in property <string> content: "";
     in property <string> sources: "";
+    in property <styled-text> formatted-message;
     callback copy-clicked(string);
     
     property <bool> is-copied: false;
@@ -68,10 +69,10 @@ export component ChatMessage inherits Rectangle {
             }
         }
 
-        Text {
-            text: root.content;
-            wrap: word-wrap;
-            color: #ffffff;
+        StyledText {
+            text: root.formatted-message;
+            default-color: #ffffff;
+            default-font-size: 14px;
             vertical-alignment: top;
         }
 
