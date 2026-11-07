@@ -151,11 +151,12 @@ export component MainWindow inherits Window {
         // Main Chat Area
         VerticalBox {
             horizontal-stretch: 1;
+            spacing: 0;
 
-            // NEW: Notification Banner
+            // Notification Banner
             Rectangle {
                 visible: root.notification != "";
-                height: 40px;
+                height: root.notification != "" ? 40px : 0px;
                 background: #7F6DF2;
                 HorizontalLayout {
                     padding: 10px;
@@ -166,17 +167,20 @@ export component MainWindow inherits Window {
                     }
                 }
             }
-
-            HorizontalBox {
-                visible: !root.sidebar-open; 
+            // Sidebar button
+            HorizontalLayout {
+                visible: !root.sidebar-open;
+                height: 55px;
+                vertical-stretch: 0;
                 padding: 10px;
                 alignment: start;
                 Button {
                     text: "Show Sidebar";
                     clicked => { root.sidebar-open = true; }
                 }
+                
             }
-            
+            // Chat history
             Rectangle {
                 vertical-stretch: 1;
                 chat-scroll-view := ScrollView {
