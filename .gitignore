@@ -1,5 +1,13 @@
+# Virtual Environment
 venv/
 __pycache__/
 *.pyc
 .env
+
+# Local Data & Databases
+data/
 chroma_db/
+
+# User Settings & Chat History
+config.json
+chat_history.json
