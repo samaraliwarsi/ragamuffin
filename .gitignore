@@ -11,3 +11,6 @@ chroma_db/
 # User Settings & Chat History
 config.json
 chat_history.json
+
+# workspace
+ragamuffin_workspace_vscode.code-workspace
